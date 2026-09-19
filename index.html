@@ -1,0 +1,2051 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood Weather Diary</title>
+    <style>
+:root{
+  /* 主色板：蓝色系 */
+  --primary:#4a90d9;
+  --primary-dark:#2e6fb8;
+  --primary-light:#7eb3e6;
+  --primary-soft:rgba(74,144,217,0.12);
+  /* 背景渐变 */
+  --bg-1:#eaf3fc;
+  --bg-2:#cfe2f7;
+  --bg-3:#a8c9ee;
+  /* 文字 */
+  --text-1:#1e3a5f;
+  --text-2:#3d5a80;
+  --text-3:#6b8aa8;
+  --text-invert:#e8eef5;
+  /* 卡片 */
+  --card-bg:rgba(255,255,255,0.72);
+  --card-border:rgba(255,255,255,0.88);
+  --radius-sm:14px;
+  --radius:20px;
+  --radius-lg:28px;
+  /* 阴影 */
+  --shadow-sm:0 4px 12px rgba(30,58,95,0.06);
+  --shadow:0 8px 24px rgba(30,58,95,0.08);
+  --shadow-lg:0 14px 40px rgba(30,58,95,0.10);
+  /* 心情色（用于卡片/按钮，不用于背景） */
+  --mood-happy:#ffd384;
+  --mood-full:#84c0ff;
+  --mood-tired:#c9b4e8;
+  --mood-sad:#2a2a2a;
+  --mood-calm:#94c8f0;
+}
+*{   margin:0;   padding:0;   box-sizing:border-box;   font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif; }
+ body{   min-height:100vh;   transition:background 0.8s ease, filter 0.8s ease;   overflow-x:hidden;   padding-bottom:70px;   position:relative;   background:linear-gradient(180deg,var(--bg-1) 0%,var(--bg-2) 55%,var(--bg-3) 100%); }
+ /* 天气/心情：仅对背景做轻微色调偏移，保持蓝色系统一 */
+ body.weather-sunny{   background:linear-gradient(180deg,#f0f6fc 0%,#d4e4f5 55%,#b3cfee 100%); }
+ body.weather-cloudy{   background:linear-gradient(180deg,#eaf1f8 0%,#d1deec 55%,#b3c6db 100%); }
+ body.weather-rainy{   background:linear-gradient(180deg,#e0edf8 0%,#aec8e4 55%,#85adcd 100%); }
+ body.weather-snowy{   background:linear-gradient(180deg,#f3f7fc 0%,#dfe8f3 55%,#c4d3e5 100%); }
+ body.weather-typhoon{   background:linear-gradient(180deg,#dfe7f0 0%,#bccae0 55%,#9aacc4 100%); }
+ /* 心情：蓝色基调上叠加心情色的柔和染色 */
+ body.mood-happy{   background:linear-gradient(180deg,#f5f0e0 0%,#e8e3d0 55%,#d8d3bf 100%); }
+ body.mood-full{   background:linear-gradient(180deg,#e4eef9 0%,#c7dbf2 55%,#a6c4e6 100%); }
+ body.mood-tired{   background:linear-gradient(180deg,#eaeaf3 0%,#d6d4e8 55%,#b9b6d4 100%); }
+ body.mood-sad{   background:linear-gradient(180deg,#2c3e50 0%,#1e2d3e 55%,#14202e 100%); }
+ body.mood-sad .card-text, body.mood-sad .card-username, body.mood-sad .history-title, body.mood-sad .top-title h1, body.mood-sad .top-title p, body.mood-sad .stat-box h3, body.mood-sad .calendar-title, body.mood-sad .main-title, body.mood-sad .main-subtitle{   color:var(--text-invert); }
+ body.mood-sad .card-time, body.mood-sad .card-user-sub, body.mood-sad .calendar-sub{   color:#9ab0c4; }
+ body.mood-calm{   background:linear-gradient(180deg,#e5f0f7 0%,#cfe2ef 55%,#b0cede 100%); }
+ body.dark-mode{   filter:brightness(0.78); }
+ /* 首页蓝色背景 */
+ body.home-bg{   background:linear-gradient(180deg,#e8f4ff 0%,#c7e2fb 55%,#a2d0f5 100%) !important; }
+ /* ============ 首页白色蕾丝花边装饰（参考图风格：波浪+水滴+虚线花） ============ */
+ /* 顶部/底部蕾丝：让容器内的 SVG 拉伸 */
+ .home-lace-top, .home-lace-bottom{
+   background:transparent;
+   overflow:visible;
+ }
+ .home-lace-top svg, .home-lace-bottom svg{
+   width:100%; height:100%; display:block;
+ }
+ /* 卡片间蕾丝分隔 */
+ .home-lace-divider{
+   height:18px; margin:16px 0; overflow:visible;
+ }
+ .home-lace-divider svg{ width:100%; height:100%; display:block; }
+ /* 页面四角装饰花 */
+ .home-deco-flower{
+   position:absolute; z-index:2; pointer-events:none;
+ }
+ .home-deco-flower svg{ display:block; width:100%; height:100%; }
+ .home-deco-flower.bl{ left:-6px; bottom:-14px; width:100px; height:100px; opacity:0.92; }
+ .home-deco-flower.tr{ right:-6px; top:-14px; width:90px; height:90px; opacity:0.82; }
+ /* 首页封面图蕾丝描边（柔和） */
+ #page-home .main-cover{
+   border:2px solid rgba(255,255,255,0.92);
+   box-shadow:0 10px 30px rgba(0,0,0,0.06), 0 0 0 4px rgba(255,255,255,0.25);
+ }
+ /* 首页副标题点缀 */
+ #page-home .main-subtitle::before,#page-home .main-subtitle::after{
+   content:'✿'; color:rgba(255,255,255,0.9); margin:0 10px; font-size:13px;
+ }
+ /* 首页功能卡片白色描边 */
+ #page-home .function-card{
+   border:2px solid rgba(255,255,255,0.92);
+   box-shadow:0 6px 18px rgba(0,0,0,0.05), 0 0 0 2px rgba(255,255,255,0.2);
+ }
+ #page-home .function-card:hover{
+   box-shadow:0 10px 24px rgba(0,0,0,0.08), 0 0 0 3px rgba(255,255,255,0.35);
+ }
+ /* 天气特效层 */
+ .weather-layer{   position:fixed;   inset:0;   z-index:0;   pointer-events:none;   overflow:hidden; }
+ .cloud{   position:absolute;   background:#fff;   border-radius:999px;   opacity:0.75;   filter:blur(2px);   animation:cloudDrift 60s linear infinite; }
+ .cloud:nth-child(1){   width:140px;   height:70px;   top:12%;   left:-150px; }
+ .cloud:nth-child(2){   width:180px;   height:85px;   top:22%;   left:-200px;   animation-delay:12s; }
+ .cloud:nth-child(3){   width:110px;   height:55px;   top:35%;   left:-120px;   animation-delay:25s; }
+ @keyframes cloudDrift{   0%{transform:translateX(0);}   100%{transform:translateX(calc(100vw + 250px));} }
+ .rain-container{   position:fixed;   inset:0;   z-index:1;   pointer-events:none;   overflow:hidden;   display:none; }
+ .rain-container canvas{   position:absolute;   inset:0;   width:100%;   height:100%; }
+ .rain-container::after{   content:'';   position:absolute;   left:0;   right:0;   bottom:0;   height:22%;   background:linear-gradient(180deg,rgba(190,215,240,0) 0%,rgba(190,215,240,0.3) 100%); }
+ .snow-container{   position:fixed;   inset:0;   z-index:1;   pointer-events:none;   overflow:hidden;   display:none; }
+ .snow{   position:absolute;   font-size:32px;   color:#ffffff;   text-shadow:0 0 10px rgba(255,255,255,0.9);   animation:snowFall 8s linear infinite; }
+ @keyframes snowFall{   0%{transform:translateY(-30px) translateX(0) rotate(0deg);opacity:0.95;}   100%{transform:translateY(100vh) translateX(100px) rotate(360deg);opacity:0.25;} }
+ .bird-container{   position:fixed;   inset:0;   z-index:1;   pointer-events:none;   overflow:hidden;   display:none; }
+ .bird{   position:absolute;   left:0;   animation-name:birdFly;   animation-timing-function:linear;   animation-iteration-count:infinite;   will-change:transform; }
+ .bird svg{   display:block;   width:100%;   height:auto;   overflow:visible;   filter:drop-shadow(0 3px 4px rgba(110,135,160,0.28));   animation:birdBank 3.6s ease-in-out infinite; }
+ @keyframes birdBank{   0%,100%{transform:rotate(-2deg);}   50%{transform:rotate(3deg);} }
+ .bird .wing{   transform-box:view-box;   transform-origin:54px 46px;   animation:wingFlap 1.15s linear infinite; }
+ .bird .wing-far{   animation-delay:0.07s; }
+ /* 扇翅两次后转入滑翔，符合真实飞鸟节奏 */
+ @keyframes wingFlap{
+   0%{transform:rotate(-38deg);}
+   14%{transform:rotate(36deg);}
+   28%{transform:rotate(-32deg);}
+   42%{transform:rotate(32deg);}
+   56%{transform:rotate(-24deg);}
+   70%{transform:rotate(-15deg);}
+   100%{transform:rotate(-22deg);}
+ }
+ /* 横越天空时带轻微上下浮沉 */
+ @keyframes birdFly{
+   0%{transform:translate(-140px,0);}
+   20%{transform:translate(20vw,-22px);}
+   40%{transform:translate(42vw,10px);}
+   60%{transform:translate(63vw,-16px);}
+   80%{transform:translate(84vw,8px);}
+   100%{transform:translate(112vw,-10px);}
+ }
+ .wind-container{   position:fixed;   inset:0;   z-index:1;   pointer-events:none;   overflow:hidden;   display:none; }
+ .wind-container canvas{   position:absolute;   inset:0;   width:100%;   height:100%; }
+ .wind-container::before{   content:'';   position:absolute;   inset:0;   background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(60,70,85,0.35) 0%,rgba(60,70,85,0) 60%),radial-gradient(ellipse 70% 40% at 30% 100%,rgba(40,50,65,0.2) 0%,rgba(40,50,65,0) 55%); }
+ body.weather-typhoon #page-post .main-card{   animation:stormShake 0.35s ease-in-out infinite; }
+ @keyframes stormShake{   0%{transform:translate(0,0);}   20%{transform:translate(-1.5px,0.8px);}   40%{transform:translate(1.2px,-1px);}   60%{transform:translate(-1px,0.6px);}   80%{transform:translate(1px,-0.5px);}   100%{transform:translate(0,0);} }
+ .sun-el{   position:fixed;   top:40px;   right:60px;   width:90px;   height:90px;   border-radius:50%;   background:radial-gradient(circle,#fff280,#ffbc42);   box-shadow:0 0 60px #ffdd70;   z-index:1;   pointer-events:none;   opacity:0;   transition:opacity 0.8s ease; }
+ /* 页面容器 */
+ .page-wrap{   max-width:720px;   margin:0 auto;   padding:20px 16px;   position:relative;   z-index:2; }
+ .page{   display:none;   opacity:0;   transform:translateY(8px); }
+ .page.active{   display:block;   animation:pageFadeIn 0.4s ease forwards; }
+ @keyframes pageFadeIn{   from{opacity:0;transform:translateY(8px);}   to{opacity:1;transform:translateY(0);} }
+ /* “我的”页面背景图 */
+ #page-profile{   position:relative;   min-height:calc(100vh - 110px); }
+ #page-profile::before{
+   content:'';
+   position:absolute;
+   inset:0;
+   background:url('images/profile-bg.jpg') center top / cover no-repeat;
+   border-radius:24px;
+   z-index:0;
+ }
+ #page-profile::after{
+   content:'';
+   position:absolute;
+   inset:0;
+   background:linear-gradient(180deg,rgba(234,243,252,0.20) 0%,rgba(168,201,238,0.34) 100%);
+   border-radius:24px;
+   z-index:0;
+ }
+ #page-profile > *{   position:relative;   z-index:1; }
+ /* 主页面 */
+ .main-cover{   width:100%;   border-radius:24px;   overflow:hidden;   margin-bottom:24px;   box-shadow:0 10px 30px rgba(0,0,0,0.08); }
+ .main-cover img{   width:100%;   height:260px;   object-fit:cover;   display:block; }
+ .main-title{   font-size:28px;   color:var(--text-1);   text-align:center;   margin-bottom:8px;   font-weight:700; }
+ .main-subtitle{   font-size:15px;   color:var(--text-2);   text-align:center;   margin-bottom:24px; }
+ .function-grid{   display:grid;   grid-template-columns:repeat(2,1fr);   gap:16px; }
+ .function-card{   background:rgba(255,255,255,0.72);   border:1px solid rgba(255,255,255,0.85);   border-radius:20px;   padding:18px 16px;   text-align:center;   cursor:pointer;   transition:0.3s;   box-shadow:0 6px 18px rgba(0,0,0,0.06);   backdrop-filter:blur(10px); }
+ .function-card:hover{   transform:translateY(-4px);   box-shadow:0 10px 24px rgba(0,0,0,0.1); }
+ .function-card .icon{   font-size:36px;   margin-bottom:10px; }
+ .function-card .title{   font-size:16px;   color:var(--text-1);   font-weight:600;   margin-bottom:4px; }
+ .function-card .desc{   font-size:13px;   color:var(--text-2); }
+ .top-title{   background:var(--card-bg);   border:1px solid var(--card-border);   border-radius:var(--radius-lg);   padding:22px 24px;   margin-bottom:22px;   text-align:center;   box-shadow:var(--shadow-lg);   backdrop-filter:blur(14px); }
+ .top-title h1{   font-size:28px;   color:var(--text-1);   letter-spacing:1px;   font-weight:700;   cursor:pointer;   transition:0.2s; }
+ .top-title h1:hover{   opacity:0.8; }
+ .top-title p{   color:var(--text-2);   margin-top:10px;   font-size:15px; }
+ .lace{   height:20px;   background-image:repeating-linear-gradient(45deg,transparent 0 8px,rgba(255,255,255,0.65) 8px 16px);   border-radius:12px;   margin:26px 0; }
+ .lace-thin{   height:15px;   margin:20px 0; }
+ /* 发布卡片 */
+ .main-card{   background:var(--card-bg);   border:1px solid var(--card-border);   border-radius:var(--radius-lg);   padding:28px 26px;   box-shadow:var(--shadow-lg);   position:relative;   overflow:hidden;   backdrop-filter:blur(16px); }
+ .mood-buttons{   display:flex;   flex-wrap:wrap;   gap:14px;   justify-content:center;   margin:22px 0; }
+ .mood-btn{   border:none;   border-radius:32px;   padding:14px 20px;   font-size:15px;   color:#2c3e50;   background:rgba(255,255,255,0.7);   border:1px solid rgba(255,255,255,0.9);   cursor:pointer;   transition:transform 0.4s ease, box-shadow 0.4s ease, background 0.4s ease, color 0.4s ease;   position:relative;   overflow:hidden;   -webkit-tap-highlight-color:transparent; }
+ /* 情绪按钮点击动画 */
+ .mood-btn.btn-pop{   animation:moodPop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+ @keyframes moodPop{   0%{transform:scale(1);}   30%{transform:scale(0.86);}   62%{transform:scale(1.14);}   82%{transform:scale(1.02);}   100%{transform:scale(1.06);} }
+ .mood-ripple{   position:absolute;   border-radius:50%;   pointer-events:none;   background:radial-gradient(circle,rgba(255,255,255,0.85) 0%,rgba(255,255,255,0.35) 45%,rgba(255,255,255,0) 72%);   transform:scale(0);   animation:rippleGo 0.6s ease-out forwards; }
+ @keyframes rippleGo{   to{transform:scale(3.4);opacity:0;} }
+ .mood-particle{   position:fixed;   z-index:9999;   pointer-events:none;   border-radius:50%;   animation:particleFly 0.75s cubic-bezier(0.2,0.7,0.3,1) forwards; }
+ @keyframes particleFly{   0%{transform:translate(-50%,-50%) scale(1);opacity:1;}   100%{transform:translate(calc(-50% + var(--tx)),calc(-50% + var(--ty))) scale(0.15);opacity:0;} }
+ .mood-btn:hover{   transform:translateY(-3px) scale(1.03);   box-shadow:0 6px 16px rgba(0,0,0,0.09); }
+ .mood-btn.active{   transform:scale(1.06);   box-shadow:0 8px 22px rgba(0,0,0,0.12); }
+ .mood-btn[data-mood="happy"].active{   background:#ffd384;   color:#925c00; }
+ .mood-btn[data-mood="full"].active{   background:#84c0ff;   color:#184b82; }
+ .mood-btn[data-mood="tired"].active{   background:#c9b4e8;   color:#4b2e70; }
+ .mood-btn[data-mood="sad"].active{   background:#1a1a1a;   color:#ffffff;   border-color:#333; }
+ .mood-btn[data-mood="calm"].active{   background:#94c8f0;   color:#1a476b; }
+ .weather-select{   margin:14px 0;   display:flex;   gap:10px;   flex-wrap:wrap;   align-items:center; }
+ .weather-select span{   font-size:15px;   color:var(--text-2); }
+ .weather-tag{   padding:6px 12px;   border-radius:20px;   background:rgba(255,255,255,0.65);   cursor:pointer;   transition:0.2s; }
+ .weather-tag:hover{   background:rgba(255,255,255,0.9); }
+ .weather-tag.active{   background:var(--primary);   color:#fff;   box-shadow:0 3px 10px var(--primary-soft); }
+ textarea{   width:100%;   min-height:140px;   border-radius:var(--radius);   border:1px solid rgba(176,203,226,0.7);   padding:18px;   background:rgba(255,255,255,0.75);   color:var(--text-1);   font-size:15px;   resize:none;   margin-top:12px;   transition:border-color 0.2s, box-shadow 0.2s; }
+ textarea:focus{   outline:none;   border-color:var(--primary);   box-shadow:0 0 0 4px var(--primary-soft); }
+ .word-count{   text-align:right;   font-size:13px;   color:#667788;   margin-top:6px; }
+ .word-count.warn{   color:#dd4444;   font-weight:bold; }
+ /* 图片上传 */
+ .img-upload-area{   margin:10px 0; }
+ #imgInput{   display:none; }
+ .upload-btn{   display:inline-block;   padding:8px 12px;   background:#eef4fa;   border-radius:14px;   font-size:14px;   color:#336699;   cursor:pointer;   transition:0.2s; }
+ .upload-btn:hover{   background:#dceaf7; }
+ .preview-box{   display:flex;   gap:8px;   flex-wrap:wrap;   margin-top:8px; }
+ .preview-img{   width:80px;   height:80px;   object-fit:cover;   border-radius:10px;   border:1px solid #b0cbe2;   cursor:pointer;   transition:0.2s; }
+ .preview-img:hover{   opacity:0.85; }
+ .save-btn{   width:100%;   margin-top:16px;   padding:15px;   border-radius:var(--radius);   border:none;   background:linear-gradient(135deg,var(--primary),var(--primary-light));   color:white;   font-size:17px;   font-weight:600;   letter-spacing:1px;   cursor:pointer;   transition:0.35s ease;   box-shadow:0 6px 18px var(--primary-soft); }
+ .save-btn:hover{   background:linear-gradient(135deg,var(--primary-dark),var(--primary));   transform:translateY(-2px);   box-shadow:0 10px 24px var(--primary-soft); }
+ .save-btn:active{   transform:translateY(0); }
+ /* 心情日历 */
+ .calendar-box{   background:var(--card-bg);   border:1px solid var(--card-border);   border-radius:var(--radius-lg);   padding:22px;   box-shadow:var(--shadow-lg);   backdrop-filter:blur(16px); }
+ .calendar-title{   font-size:22px;   color:var(--text-1);   margin-bottom:8px;   text-align:center;   font-weight:700; }
+ .calendar-sub{   font-size:14px;   color:var(--text-2);   text-align:center;   margin-bottom:16px; }
+ .calendar-month{   margin-bottom:18px; }
+ .calendar-month h4{   font-size:15px;   color:var(--text-1);   margin-bottom:10px;   text-align:center;   font-weight:600; }
+ .calendar-grid{   display:grid;   grid-template-columns:repeat(7,1fr);   gap:6px;   text-align:center; }
+ .calendar-day{   width:36px;   height:36px;   border-radius:50%;   line-height:36px;   font-size:13px;   color:#3c3c43;   background:rgba(255,255,255,0.6);   cursor:pointer;   transition:0.2s;
+    position:relative;
+ }
+ .calendar-day .emoji-mark{
+    position:absolute;
+    font-size:16px;
+    bottom:-4px;
+    right:-4px;
+ }
+ .calendar-day:hover{   background:rgba(255,255,255,0.9); }
+ .calendar-day.empty{   background:transparent;   color:transparent;   pointer-events:none; }
+ .calendar-day.happy{   background:#ffd384;   color:#925c00; }
+ .calendar-day.full{   background:#84c0ff;   color:#184b82; }
+ .calendar-day.tired{   background:#c9b4e8;   color:#4b2e70; }
+ .calendar-day.sad{   background:#1a1a1a;   color:#ffffff; }
+ .calendar-day.calm{   background:#94c8f0;   color:#1a476b; }
+ .calendar-day.today{   box-shadow:0 0 0 2px var(--primary); }
+ /* 动态卡片 */
+ .history-box{   margin-top:14px; }
+ .history-title{   font-size:22px;   color:var(--text-1);   margin-bottom:18px;   cursor:pointer;   font-weight:700; }
+ .history-title:hover{   opacity:0.8; }
+ .card-list{   display:grid;   gap:16px; }
+ .diary-card{   border-radius:var(--radius);   padding:20px;   border:1px solid rgba(255,255,255,0.82);   box-shadow:var(--shadow-sm);   backdrop-filter:blur(10px);   animation:cardIn 0.5s ease;   transition:transform 0.3s, box-shadow 0.3s;   cursor:pointer; }
+ @keyframes cardIn{   from{opacity:0;transform:translateY(12px);}   to{opacity:1;transform:translateY(0);} }
+ .diary-card:hover{   transform:translateY(-2px);   box-shadow:var(--shadow); }
+ .diary-card.happy{   background:rgba(255,212,130,0.45); }
+ .diary-card.full{   background:rgba(132,192,255,0.42); }
+ .diary-card.tired{   background:rgba(201,180,232,0.45); }
+ .diary-card.sad{   background:rgba(20,20,20,0.85);   color:#e0e0e0; }
+ .diary-card.calm{   background:rgba(148,200,240,0.42); }
+ .card-user{   display:flex;   gap:10px;   align-items:center;   margin-bottom:10px; }
+ .avatar{   width:40px;   height:40px;   border-radius:50%;   background:linear-gradient(135deg,var(--primary),var(--primary-light));   color:#fff;   text-align:center;   line-height:40px;   font-weight:bold;   cursor:pointer;   transition:0.2s;   box-shadow:0 3px 8px var(--primary-soft); }
+ .avatar:hover{   transform:scale(1.05); }
+ .card-time{   font-size:13px;   color:var(--text-3);   margin-bottom:8px;   display:flex;   justify-content:space-between;   align-items:center; }
+ .card-tag{   display:inline-block;   padding:5px 12px;   background:rgba(255,255,255,0.7);   border-radius:22px;   font-size:14px;   margin-bottom:12px;   color:var(--text-1);   cursor:pointer;   transition:0.2s; }
+ .card-tag:hover{   background:rgba(255,255,255,0.95); }
+ .card-text{   line-height:1.7;   color:var(--text-1);   font-size:15px;   white-space:pre-wrap;   margin-bottom:10px; }
+ .card-img-wrap{   display:flex;   gap:8px;   flex-wrap:wrap;   margin-bottom:10px; }
+ .card-img{   max-width:120px;   max-height:120px;   border-radius:12px;   object-fit:cover;   cursor:pointer;   transition:0.2s; }
+ .card-img:hover{   opacity:0.85; }
+ .del-btn{   font-size:13px;   color:#c24b4b;   cursor:pointer;   padding:3px 8px;   border-radius:10px;   background:rgba(255,255,255,0.6);   transition:0.2s; }
+ .del-btn:hover{   background:rgba(255,255,255,0.9); }
+ /* 点赞 */
+ .card-actions{   display:flex;   justify-content:flex-end;   align-items:center;   margin-top:2px; }
+ .like-btn{   display:inline-flex;   align-items:center;   gap:5px;   font-size:13px;   color:#7a8ba0;   background:rgba(255,255,255,0.65);   padding:5px 13px;   border-radius:20px;   cursor:pointer;   transition:background .2s,color .2s,transform .15s;   user-select:none; }
+ .like-btn:hover{   background:rgba(255,255,255,0.95); }
+ .like-btn:active{   transform:scale(0.92); }
+ .like-btn.liked{   color:#ff5c8a;   background:rgba(255,92,138,0.12); }
+ .like-btn .heart{   font-size:15px;   line-height:1; }
+ .like-btn.liked .heart{   animation:heartPop .3s ease; }
+ @keyframes heartPop{   0%{transform:scale(0.5);}   60%{transform:scale(1.35);}   100%{transform:scale(1);} }
+ /* 底部导航 */
+ .bottom-nav{   position:fixed;   bottom:0;   left:0;   right:0;   background:rgba(255,255,255,0.92);   backdrop-filter:blur(20px);   border-top:1px solid rgba(74,144,217,0.12);   display:flex;   justify-content:space-around;   align-items:center;   padding:10px 0 8px;   z-index:100;   box-shadow:0 -4px 20px rgba(30,58,95,0.06); }
+ .nav-item{   display:flex;   flex-direction:column;   align-items:center;   gap:4px;   font-size:11px;   color:var(--text-3);   cursor:pointer;   transition:color 0.25s, transform 0.25s; }
+ .nav-item .nav-icon{   font-size:22px;   transition:transform 0.25s; }
+ .nav-item.active{   color:var(--primary); }
+ .nav-item.active .nav-icon{   transform:scale(1.12); }
+ .nav-item:active .nav-icon{   transform:scale(0.92); }
+ /* 弹窗 */
+ .toast{   position:fixed;   top:24px;   left:50%;   transform:translateX(-50%);   background:rgba(30,30,30,0.78);   color:#fff;   padding:12px 24px;   border-radius:16px;   z-index:9999;   opacity:0;   transition:opacity 0.4s;   pointer-events:none; }
+ .toast.show{   opacity:1; }
+ .edit-mask{   position:fixed;   inset:0;   background:rgba(0,0,0,0.4);   z-index:998;   display:none;   align-items:center;   justify-content:center;   padding:15px; }
+ .edit-panel{   width:100%;   max-width:600px;   background:#fff;   border-radius:24px;   padding:24px; }
+ .edit-panel h3{   margin-bottom:14px;   color:#2c3e50; }
+ .edit-panel textarea{   min-height:180px;   margin:10px 0; }
+ .edit-buttons{   display:flex;   gap:12px;   margin-top:12px; }
+ .edit-buttons button{   flex:1;   padding:12px;   border-radius:16px;   border:none;   font-size:16px;   cursor:pointer;   transition:0.2s; }
+ .btn-save-edit{   background:#5a9bd5;   color:#fff; }
+ .btn-save-edit:hover{   background:#4888c4; }
+ .btn-cancel-edit{   background:#ddd;   color:#333; }
+ .btn-cancel-edit:hover{   background:#ccc; }
+ .image-preview-mask{   position:fixed;   inset:0;   background:rgba(0,0,0,0.85);   z-index:999;   display:none;   align-items:center;   justify-content:center;   padding:15px; }
+ .image-preview-mask img{   max-width:90%;   max-height:80vh;   border-radius:12px;   object-fit:contain; }
+ /* 统计卡片 */
+ .stat-box{   background:var(--card-bg);   border:1px solid var(--card-border);   border-radius:var(--radius-lg);   padding:22px;   box-shadow:var(--shadow-lg);   backdrop-filter:blur(16px);   margin-bottom:16px; }
+ .stat-box h3{   margin-bottom:10px;   color:var(--text-1);   font-size:16px;   cursor:pointer;   font-weight:700; }
+ .stat-box h3:hover{   opacity:0.8; }
+ /* ============ 新增：个人资料弹窗样式 ============ */
+ .profile-mask{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    z-index:998;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:15px;
+ }
+ .profile-panel{
+    width:100%;
+    max-width:480px;
+    background:#fff;
+    border-radius:24px;
+    padding:24px;
+ }
+ .profile-panel h3{
+    margin-bottom:16px;
+    color:#2c3e50;
+    text-align:center;
+ }
+ .avatar-preview-box{
+    text-align:center;
+    margin-bottom:16px;
+ }
+ .avatar-preview{
+    width:100px;
+    height:100px;
+    border-radius:50%;
+    object-fit:cover;
+    border:2px solid #5a9bd5;
+ }
+ #avatarFile{
+    display:none;
+ }
+ .avatar-label{
+    display:inline-block;
+    margin-top:8px;
+    color:#5a9bd5;
+    cursor:pointer;
+ }
+ .profile-row{
+    margin-bottom:14px;
+ }
+ .profile-row label{
+    display:block;
+    margin-bottom:4px;
+    color:#2c3e50;
+ }
+ .profile-row input,.profile-row textarea{
+    width:100%;
+    border:1px solid #b0cbe2;
+    border-radius:12px;
+    padding:10px;
+    font-size:15px;
+ }
+ .profile-buttons{
+    display:flex;gap:12px;margin-top:18px;
+ }
+ .profile-buttons button{
+    flex:1;padding:12px;border-radius:16px;border:none;font-size:16px;cursor:pointer;
+ }
+ .profile-save{background:#5a9bd5;color:#fff;}
+ .profile-cancel{background:#ddd;color:#333;}
+ /* ============ 新增：日历表情选择弹窗样式 ============ */
+ .mood-emoji-mask{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    z-index:998;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:15px;
+ }
+ .emoji-panel{
+    background:#fff;
+    border-radius:20px;
+    padding:20px;
+ }
+ .emoji-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:10px;
+    margin:16px 0;
+ }
+ .emoji-item{
+    font-size:28px;
+    text-align:center;
+    cursor:pointer;
+    padding:6px;
+    border-radius:8px;
+ }
+ .emoji-item:hover{background:#eee;}
+ .emoji-close{
+    width:100%;
+    padding:10px;
+    border-radius:14px;
+    border:none;
+    background:#ddd;
+    cursor:pointer;
+ }
+ .tool-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px;
+ }
+ .tool-small-btn{
+    padding:10px;
+    border:none;
+    border-radius:14px;
+    background:rgba(255,255,255,0.7);
+    cursor:pointer;
+    font-size:14px;
+ }
+ .tool-small-btn:hover{
+    background:rgba(255,255,255,0.9);
+ }
+ @media(max-width:600px){
+   .top-title h1{
+     font-size:24px;
+   }
+   .mood-btn{
+     padding:12px 16px;
+     font-size:14px;
+   }
+   .sun-el{
+     width:60px;
+     height:60px;
+     right:30px;
+     top:20px;
+   }
+   .calendar-day{
+     width:32px;
+     height:32px;
+     line-height:32px;
+     font-size:12px;
+   }
+   .function-grid{
+     grid-template-columns:1fr;
+   }
+ }
+    </style>
+</head>
+<body class="mood-calm">
+
+<div class="weather-layer">
+  <div class="cloud"></div>
+  <div class="cloud"></div>
+  <div class="cloud"></div>
+</div>
+<!-- 首页蕾丝花边装饰条（内联 SVG） -->
+<svg class="home-lace-top" id="homeLaceTop" xmlns="http://www.w3.org/2000/svg" width="80" height="36" viewBox="0 0 80 36" preserveAspectRatio="none" style="position:fixed;top:0;left:0;right:0;height:36px;z-index:3;pointer-events:none;display:none">
+  <path d="M0,0 L80,0 L80,16 Q74,26 68,18 Q65,32 62,18 Q59,32 56,18 Q53,32 50,18 Q47,32 44,18 Q41,32 38,18 Q35,32 32,18 Q29,32 26,18 Q23,32 20,18 Q17,32 14,18 Q11,32 8,18 Q4,22 0,18 Z" fill="rgba(255,255,255,0.95)"/>
+  <path d="M0,16 Q4,22 8,18 Q11,32 14,18 Q17,32 20,18 Q23,32 26,18 Q29,32 32,18 Q35,32 38,18 Q41,32 44,18 Q47,32 50,18 Q53,32 56,18 Q59,32 62,18 Q65,32 68,18 Q74,26 80,16" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="0.8"/>
+</svg>
+<svg class="home-lace-bottom" id="homeLaceBottom" xmlns="http://www.w3.org/2000/svg" width="80" height="36" viewBox="0 0 80 36" preserveAspectRatio="none" style="position:fixed;bottom:70px;left:0;right:0;height:36px;z-index:3;pointer-events:none;display:none">
+  <path d="M0,36 L80,36 L80,20 Q74,10 68,18 Q65,4 62,18 Q59,4 56,18 Q53,4 50,18 Q47,4 44,18 Q41,4 38,18 Q35,4 32,18 Q29,4 26,18 Q23,4 20,18 Q17,4 14,18 Q11,4 8,18 Q4,14 0,20 Z" fill="rgba(255,255,255,0.95)"/>
+  <path d="M0,20 Q4,14 8,18 Q11,4 14,18 Q17,4 20,18 Q23,4 26,18 Q29,4 32,18 Q35,4 38,18 Q41,4 44,18 Q47,4 50,18 Q53,4 56,18 Q59,4 62,18 Q65,4 68,18 Q74,10 80,20" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="0.8"/>
+</svg>
+<div class="rain-container" id="rainBox"></div>
+<div class="snow-container" id="snowBox"></div>
+<div class="bird-container" id="birdBox"></div>
+<div class="wind-container" id="windBox"></div>
+<div class="sun-el" id="sunDom"></div>
+<div class="toast" id="toast"></div>
+
+<!-- 原有编辑弹窗 -->
+<div class="edit-mask" id="editMask">
+  <div class="edit-panel">
+    <h3>✏️ 修改动态</h3>
+    <textarea id="editText"></textarea>
+    <div class="edit-buttons">
+      <button class="btn-save-edit" onclick="saveEdit()">保存修改</button>
+      <button class="btn-cancel-edit" onclick="closeEdit()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 大图预览弹窗 -->
+<div class="image-preview-mask" id="imagePreviewMask" onclick="closeImagePreview()">
+  <img src="" alt="大图预览" id="previewImage">
+</div>
+
+<!-- ============【新增】个人信息编辑弹窗 ============ -->
+<div class="profile-mask" id="profileMask">
+    <div class="profile-panel">
+        <h3>👤 编辑个人信息</h3>
+        <div class="avatar-preview-box">
+            <img id="profileAvatarImg" class="avatar-preview">
+            <label class="avatar-label">
+                <input type="file" id="avatarFile" accept="image/*">
+                更换头像
+            </label>
+        </div>
+        <div class="profile-row">
+            <label>昵称</label>
+            <input type="text" id="inputNickname" placeholder="输入你的昵称">
+        </div>
+        <div class="profile-row">
+            <label>个性签名</label>
+            <textarea id="inputSign" rows="2" placeholder="写一句个性签名"></textarea>
+        </div>
+        <div class="profile-buttons">
+            <button class="profile-save" onclick="saveProfile()">保存</button>
+            <button class="profile-cancel" onclick="closeProfileMask()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============【新增】日历表情选择弹窗 ============ -->
+<div class="mood-emoji-mask" id="emojiMask">
+    <div class="emoji-panel">
+        <h3>选择当日心情表情</h3>
+        <div class="emoji-grid">
+            <span class="emoji-item">😊</span>
+            <span class="emoji-item">😢</span>
+            <span class="emoji-item">😡</span>
+            <span class="emoji-item">😴</span>
+            <span class="emoji-item">🥰</span>
+            <span class="emoji-item">😐</span>
+            <span class="emoji-item">😰</span>
+            <span class="emoji-item">🎉</span>
+            <span class="emoji-item">🤔</span>
+            <span class="emoji-item">💪</span>
+        </div>
+        <button class="emoji-close" onclick="closeEmojiMask()">关闭</button>
+    </div>
+</div>
+
+<div class="page-wrap">
+   <!-- 页面1：主页面 -->
+   <div class="page active" id="page-home" style="position:relative;">
+     <div class="main-cover">
+       <img id="homeCoverImg" src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20little%20girl%20with%20pigtails%20and%20a%20small%20backpack%2C%20standing%20in%20a%20lush%20green%20seaside%20meadow%20town%2C%20classic%20hand-drawn%20Japanese%20anime%20film%20style%2C%20Studio%20Ghibli%20Miyazaki%20aesthetic%2C%20soft%20hand-painted%20watercolor%20backgrounds%2C%20lush%20detailed%20nature%2C%20big%20fluffy%20cumulus%20clouds%2C%20warm%20nostalgic%20golden%20sunlight%2C%20gentle%20cel%20shading%2C%20pastel%20blue%20sky%20and%20sea%2C%20whimsical%20peaceful%20mood%2C%20cinematic%20wide%20shot&image_size=landscape_16_9" alt="Destination" onload="handleCoverLoad(this)">
+     </div>
+
+     <div class="home-lace-divider"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 18" preserveAspectRatio="none"><path d="M0,6 Q5,2 10,6 Q15,14 20,6 Q25,2 30,6 Q35,14 40,6 Q45,2 50,6 Q55,14 60,6 L60,10 Q55,16 50,10 Q45,2 40,10 Q35,16 30,10 Q25,2 20,10 Q15,16 10,10 Q5,2 0,10 Z" fill="rgba(255,255,255,0.85)"/></svg></div>
+
+     <h1 class="main-title">Choose a Destination</h1>
+     <p class="main-subtitle">记录心情，也记录每一天的目的地</p>
+
+     <div class="home-lace-divider"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 18" preserveAspectRatio="none"><path d="M0,6 Q5,2 10,6 Q15,14 20,6 Q25,2 30,6 Q35,14 40,6 Q45,2 50,6 Q55,14 60,6 L60,10 Q55,16 50,10 Q45,2 40,10 Q35,16 30,10 Q25,2 20,10 Q15,16 10,10 Q5,2 0,10 Z" fill="rgba(255,255,255,0.85)"/></svg></div>
+
+     <!-- 四角虚线装饰花 -->
+     <div class="home-deco-flower bl" style="display:none" id="homeFlowerBL"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="none" stroke="rgba(255,255,255,0.92)" stroke-width="2.5" stroke-dasharray="5 4" stroke-linecap="round"><ellipse cx="50" cy="24" rx="10" ry="17"/><ellipse cx="70" cy="37" rx="10" ry="17" transform="rotate(72 70 37)"/><ellipse cx="62" cy="64" rx="10" ry="17" transform="rotate(144 62 64)"/><ellipse cx="38" cy="64" rx="10" ry="17" transform="rotate(216 38 64)"/><ellipse cx="30" cy="37" rx="10" ry="17" transform="rotate(288 30 37)"/></g><circle cx="50" cy="50" r="6" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2"/></svg></div>
+     <div class="home-deco-flower tr" style="display:none" id="homeFlowerTR"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="none" stroke="rgba(255,255,255,0.82)" stroke-width="2.2" stroke-dasharray="5 4" stroke-linecap="round"><ellipse cx="50" cy="24" rx="10" ry="17"/><ellipse cx="70" cy="37" rx="10" ry="17" transform="rotate(72 70 37)"/><ellipse cx="62" cy="64" rx="10" ry="17" transform="rotate(144 62 64)"/><ellipse cx="38" cy="64" rx="10" ry="17" transform="rotate(216 38 64)"/><ellipse cx="30" cy="37" rx="10" ry="17" transform="rotate(288 30 37)"/></g><circle cx="50" cy="50" r="6" fill="none" stroke="rgba(255,255,255,0.82)" stroke-width="2"/></svg></div>
+   </div>
+
+   <!-- 页面2：写动态 -->
+   <div class="page" id="page-post">
+     <div class="top-title">
+       <h1>☁️ Mood Weather Diary</h1>
+       <p>记录属于你的每日心情气象</p>
+     </div>
+
+     <div class="lace"></div>
+
+     <div class="main-card">
+       <div class="mood-buttons">
+         <button class="mood-btn" data-mood="happy" onclick="selectMood('happy','😄 开心',this)">😄 开心</button>
+         <button class="mood-btn" data-mood="full" onclick="selectMood('full','✨ 充实',this)">✨ 充实</button>
+         <button class="mood-btn" data-mood="tired" onclick="selectMood('tired','😮‍💨 疲惫',this)">😮‍💨 疲惫</button>
+         <button class="mood-btn" data-mood="sad" onclick="selectMood('sad','🌧️ 低落',this)">🌧️ 低落</button>
+         <button class="mood-btn active" data-mood="calm" onclick="selectMood('calm','🌿 平静',this)">🌿 平静</button>
+       </div>
+
+       <div class="weather-select">
+         <span>今日天气：</span>
+         <span class="weather-tag" data-w="☀️晴天" onclick="setWeather(this)">☀️晴天</span>
+         <span class="weather-tag" data-w="⛅多云" onclick="setWeather(this)">⛅多云</span>
+         <span class="weather-tag" data-w="🌧️下雨" onclick="setWeather(this)">🌧️下雨</span>
+         <span class="weather-tag" data-w="❄️下雪" onclick="setWeather(this)">❄️下雪</span>
+         <span class="weather-tag" data-w="🌀台风" onclick="setWeather(this)">🌀台风</span>
+       </div>
+
+       <textarea id="diaryInput" placeholder="写下此刻心情，分享你的动态……最多500字符"></textarea>
+       <div class="word-count"><span id="countText">0</span> / 500 字符</div>
+
+       <div class="img-upload-area">
+         <input type="file" id="imgInput" accept="image/*" multiple onchange="handleImageUpload(event)">
+         <label for="imgInput" class="upload-btn">🖼 添加图片</label>
+         <div class="preview-box" id="previewBox"></div>
+       </div>
+
+       <button class="save-btn" onclick="saveDiary()">发布动态</button>
+     </div>
+
+     <div class="lace-thin"></div>
+     <div class="stat-box" onclick="showToast('心情统计详情')">
+       <h3>📊 心情统计</h3>
+       <div id="statText">暂无记录</div>
+     </div>
+   </div>
+
+   <!-- 页面3：大家动态 -->
+   <div class="page" id="page-feed">
+     <div class="top-title">
+       <h1>🌐 大家的动态</h1>
+       <p>看看今天大家的心情</p>
+     </div>
+
+     <div class="lace"></div>
+
+     <div class="history-box">
+       <h2 class="history-title" onclick="refreshFeed(false)">✨ 刷新动态</h2>
+       <div class="card-list" id="recordContainer"></div>
+     </div>
+   </div>
+
+   <!-- 页面4：心情日历 -->
+   <div class="page" id="page-calendar">
+     <div class="top-title">
+       <h1>📅 心情日历</h1>
+       <p>回看每一天的心情记录</p>
+     </div>
+
+     <div class="lace"></div>
+     <div class="calendar-box">
+       <h2 class="calendar-title" id="calendarYearTitle">心情日历</h2>
+       <p class="calendar-sub">每一天都值得被记录</p>
+       <div id="calendarContainer"></div>
+     </div>
+   </div>
+
+   <!-- 页面5：我的 -->
+   <div class="page" id="page-profile">
+     <div class="top-title">
+       <h1>👤 我的</h1>
+       <p>管理你的心情日记</p>
+     </div>
+
+     <div class="lace"></div>
+
+     <div class="stat-box">
+       <h3>📊 我的心情统计</h3>
+       <div id="profileStatText">暂无记录</div>
+     </div>
+
+     <div class="lace-thin"></div>
+     <div class="main-card">
+       <!-- 【新增按钮：打开个人资料编辑弹窗】 -->
+       <div class="tool-row" style="margin-bottom:12px;">
+         <button class="tool-small-btn" onclick="openProfileMask()">✏️编辑个人信息</button>
+       </div>
+       <div class="tool-row">
+         <button class="tool-small-btn" onclick="toggleDark()">🌙 深色模式</button>
+         <button class="tool-small-btn" onclick="fillNowTime()">⏱ 填入当前时间</button>
+       </div>
+       <div class="tool-row">
+         <button class="tool-small-btn" onclick="exportDiary()">📤 导出全部动态</button>
+         <button class="tool-small-btn" onclick="clearAllRecord()">🗑清空全部</button>
+       </div>
+     </div>
+   </div>
+
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('home')">
+    <span class="nav-icon">🏠</span>
+    <span>首页</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('post')">
+    <span class="nav-icon">✏️</span>
+    <span>写动态</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('feed')">
+    <span class="nav-icon">🌐</span>
+    <span>动态</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('calendar')">
+    <span class="nav-icon">📅</span>
+    <span>日历</span>
+  </div>
+  <div class="nav-item" onclick="switchPage('profile')">
+    <span class="nav-icon">👤</span>
+    <span>我的</span>
+  </div>
+</div>
+
+<script>
+let currentMoodKey = "calm";
+let currentMoodText = "🌿 平静";
+let currentWeather = "⛅多云";
+let editIndex = null;
+const MAX_LENGTH = 500;
+let selectedImages = [];
+
+// ============【云端共享动态】所有动态存入 textdb.online 免费云存储，互相可见 ============
+// 共享 feed 的 key 写死在页面里：任何拿到这个页面的人读写同一个云端列表
+const CLOUD_FEED_KEY = "mooddiary-feed-v2-t5hw8nq3zxk7m2vj9c4d";
+const CLOUD_IMG_PREFIX = "mooddiary-imgs-v2-";
+let myDeviceId = localStorage.getItem("moodDeviceId");
+if(!myDeviceId){
+  myDeviceId = "u" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  localStorage.setItem("moodDeviceId", myDeviceId);
+}
+let allRecords = JSON.parse(localStorage.getItem("moodStore") || "[]");
+let cloudBusy = false, cloudDirty = false;
+const remoteImgCache = {};
+// 模拟动态（小桃/阿泽/晚星）的点赞只存本机：{mockId: {count:n, mine:true/false}}
+let mockLikes = JSON.parse(localStorage.getItem("mockLikes") || "{}");
+
+function isMine(r){ return r.deviceId === myDeviceId; }
+function myDisplayName(){
+  const nick = (userInfo.nickname || "").trim();
+  return nick || ("访客" + myDeviceId.slice(-4));
+}
+function myAvatarChar(){ return myDisplayName().slice(0,1); }
+
+function cloudRead(key){
+  return fetch("https://textdb.online/" + key).then(res=>res.text());
+}
+function cloudWrite(key, value){
+  // 注意：URL 不能带尾部斜杠，/update/ 会 301 跳转且跳转响应缺少跨域头导致浏览器 fetch 失败
+  return fetch("https://textdb.online/update", {
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:"key=" + encodeURIComponent(key) + "&value=" + encodeURIComponent(value)
+  }).then(res=>res.json()).then(j=>{
+    if(!j || j.status !== 1) throw new Error("云端写入失败");
+  });
+}
+function cloudDelete(key){ return cloudWrite(key, ""); }
+
+// 合并点赞：我自己的点赞状态以本机为准（支持取消赞），其他设备的点赞从云端保留
+function mergeLikes(localLikes, cloudLikes){
+  const cloud = Array.isArray(cloudLikes) ? cloudLikes : [];
+  const local = Array.isArray(localLikes) ? localLikes : [];
+  const others = cloud.filter(d=>d !== myDeviceId);
+  return Array.from(new Set(others.concat(local)));
+}
+
+// 切换云端动态的点赞（幂等：一人一赞，再点取消）
+function toggleLike(id){
+  const rec = allRecords.find(r=>r.id===id);
+  if(!rec) return;
+  if(!Array.isArray(rec.likes)) rec.likes = [];
+  const i = rec.likes.indexOf(myDeviceId);
+  if(i >= 0) rec.likes.splice(i,1); else rec.likes.push(myDeviceId);
+  localStorage.setItem("moodStore", JSON.stringify(allRecords));
+  renderRecords(); // 乐观更新，立即响应
+  cloudSaveFeed().catch(()=>showToast("点赞已保存，云端同步失败"));
+}
+
+// 切换模拟动态的点赞（仅本机）
+function toggleMockLike(mockId){
+  const cur = mockLikes[mockId] || {count:0, mine:false};
+  cur.mine = !cur.mine;
+  cur.count = Math.max(0, cur.count + (cur.mine ? 1 : -1));
+  mockLikes[mockId] = cur;
+  localStorage.setItem("mockLikes", JSON.stringify(mockLikes));
+  renderRecords();
+}
+
+// 压缩图片（最长边420px、JPEG 60%），控制云端体积
+function compressImage(dataURL){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.onload = function(){
+      try{
+        const maxSide = 420;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(img.width * scale));
+        c.height = Math.max(1, Math.round(img.height * scale));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.6));
+      }catch(e){ resolve(dataURL); }
+    };
+    img.onerror = function(){ resolve(dataURL); };
+    img.src = dataURL;
+  });
+}
+
+// 写共享列表：先取云端最新按 id 合并再写，避免覆盖别人的动态
+async function cloudSaveFeed(){
+  if(cloudBusy){ cloudDirty = true; return; }
+  cloudBusy = true;
+  try{
+    do{
+      cloudDirty = false;
+      let merged = allRecords.slice();
+      try{
+        const txt = await cloudRead(CLOUD_FEED_KEY);
+        if(txt.trim()){
+          const map = {};
+          JSON.parse(txt).forEach(r=>{ map[r.id] = r; });
+          allRecords.forEach(r=>{
+            const cloudRec = map[r.id];
+            if(cloudRec) r.likes = mergeLikes(r.likes, cloudRec.likes);
+            map[r.id] = r;
+          });
+          merged = Object.values(map);
+        }
+      }catch(e){}
+      merged.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      merged = merged.slice(0,200);
+      allRecords = merged;
+      localStorage.setItem("moodStore", JSON.stringify(merged));
+      const payload = merged.map(function(r){
+        const c = Object.assign({}, r);
+        delete c.imgs; // 图片单独存，防止超出云端单条20万字符限制
+        return c;
+      });
+      await cloudWrite(CLOUD_FEED_KEY, JSON.stringify(payload));
+    }while(cloudDirty);
+  }finally{
+    cloudBusy = false;
+  }
+}
+
+// 拉取别人的图片（按记录id单独存储，加载到内存缓存）
+async function loadRemoteImgs(item){
+  if(item.imgs && item.imgs.length) return item.imgs;
+  if(remoteImgCache[item.id]) return remoteImgCache[item.id];
+  try{
+    const txt = await cloudRead(item.imgKey);
+    const arr = txt.trim() ? JSON.parse(txt) : [];
+    remoteImgCache[item.id] = arr;
+    return arr;
+  }catch(e){ return []; }
+}
+
+// 打开页面时拉取云端动态，并把旧版本只存在本机的记录自动迁移上云
+async function cloudInit(){
+  try{
+    const txt = await cloudRead(CLOUD_FEED_KEY);
+    let latest = [];
+    if(txt.trim()) latest = JSON.parse(txt);
+    const oldLocal = allRecords.filter(r=>!r.id);
+    for(const r of oldLocal){
+      r.id = myDeviceId + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,6);
+      r.deviceId = myDeviceId;
+      r.userName = r.userName || myDisplayName();
+      r.avatar = r.avatar || myAvatarChar();
+      const t = Date.parse(r.time);
+      r.ts = isNaN(t) ? Date.now() : t;
+      r.imgCount = r.imgs ? r.imgs.length : 0;
+      if(r.imgs && r.imgs.length){
+        r.imgKey = CLOUD_IMG_PREFIX + r.id;
+        try{ await cloudWrite(r.imgKey, JSON.stringify(r.imgs)); }catch(e){}
+      }
+    }
+    const map = {};
+    latest.forEach(r=>{ map[r.id] = r; });
+    // 本机记录也要参与合并：包含尚未同步成功的带id记录，按 ts 新者胜
+    allRecords.forEach(r=>{
+      const cur = map[r.id];
+      if(!cur || (r.ts||0) >= (cur.ts||0)){
+        if(cur) r.likes = mergeLikes(r.likes, cur.likes);
+        map[r.id] = r;
+      }
+    });
+    allRecords = Object.values(map).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,200);
+    localStorage.setItem("moodStore", JSON.stringify(allRecords));
+    renderRecords(); renderStat(); renderProfileStat();
+    // 有旧格式记录或未同步成功的本机记录时，补传云端
+    const unsynced = allRecords.some(function(r){
+      return !latest.some(function(c){ return c.id === r.id; });
+    });
+    if(oldLocal.length || unsynced) cloudSaveFeed().catch(()=>{});
+  }catch(e){
+    renderRecords(); renderStat(); renderProfileStat();
+    showToast("云端连接失败，暂时只显示本机数据");
+  }
+}
+
+// 拉取云端最新动态（进入动态页时 + 每30秒自动）
+async function refreshFeed(silent){
+  try{
+    const txt = await cloudRead(CLOUD_FEED_KEY);
+    if(!txt.trim()){
+      if(!silent) showToast("暂无云端动态");
+      return;
+    }
+    const map = {};
+    JSON.parse(txt).forEach(r=>{ map[r.id] = r; });
+    allRecords.forEach(r=>{
+      if(!map[r.id]) map[r.id] = r;
+      else{
+        const cloudRec = map[r.id];
+        cloudRec.likes = mergeLikes(r.likes, cloudRec.likes);
+        if(isMine(r) && r.imgs && r.imgs.length){
+          map[r.id] = Object.assign({}, cloudRec, {imgs: r.imgs});
+        }
+      }
+    });
+    allRecords = Object.values(map).sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,200);
+    localStorage.setItem("moodStore", JSON.stringify(allRecords));
+    renderRecords(); renderStat(); renderProfileStat();
+    if(!silent) showToast("已刷新动态");
+  }catch(e){
+    if(!silent) showToast("刷新失败，请检查网络");
+  }
+}
+
+// ============【新增变量】个人信息 + 日历表情存储 ============
+let userInfo = JSON.parse(localStorage.getItem("userInfo")) || {avatar:"",nickname:"",signature:""};
+let calendarMoodEmoji = JSON.parse(localStorage.getItem("calendarMoodEmoji")) || {};
+let selectCalendarDateKey = "";
+
+const rainBox = document.getElementById("rainBox");
+const snowBox = document.getElementById("snowBox");
+const birdBox = document.getElementById("birdBox");
+const windBox = document.getElementById("windBox");
+const sunDom = document.getElementById("sunDom");
+const editMask = document.getElementById("editMask");
+const editTextDom = document.getElementById("editText");
+const previewBox = document.getElementById("previewBox");
+const imgInput = document.getElementById("imgInput");
+const imagePreviewMask = document.getElementById("imagePreviewMask");
+const previewImage = document.getElementById("previewImage");
+const calendarContainer = document.getElementById("calendarContainer");
+
+// 新增dom
+const profileMask = document.getElementById("profileMask");
+const profileAvatarImg = document.getElementById("profileAvatarImg");
+const avatarFile = document.getElementById("avatarFile");
+const inputNickname = document.getElementById("inputNickname");
+const inputSign = document.getElementById("inputSign");
+const emojiMask = document.getElementById("emojiMask");
+
+// 模拟其他用户动态
+const mockOthers = [
+  {
+    userName:"小桃",
+    avatar:"桃",
+    key:"happy",
+    label:"😄 开心",
+    weather:"☀️晴天",
+    text:"今天出门散步，阳光特别舒服，路边开满小花，一整天心情都很棒✨",
+    time:"2026/09/06 16:20:11",
+    imgs:[]
+  },
+  {
+    userName:"阿泽",
+    avatar:"泽",
+    key:"calm",
+    label:"🌿 平静",
+    weather:"❄️下雪",
+    text:"窗外飘雪，安安静静泡一杯热奶茶，享受独处的时光。",
+    time:"2026/09/05 21:10:02",
+    imgs:[]
+  },
+  {
+    userName:"晚星",
+    avatar:"星",
+    key:"sad",
+    label:"🌧️ 低落",
+    weather:"🌧️下雨",
+    text:"下雨天容易胡思乱想，希望坏情绪快点过去。",
+    time:"2026/09/04 22:33:41",
+    imgs:[]
+  }
+];
+
+// ============ 首页封面图：文生图异步生成，自动刷新占位图直到拿到真图 ============
+const COVER_IMG_URL = "https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=cute%20little%20girl%20with%20pigtails%20and%20a%20small%20backpack%2C%20standing%20in%20a%20lush%20green%20seaside%20meadow%20town%2C%20classic%20hand-drawn%20Japanese%20anime%20film%20style%2C%20Studio%20Ghibli%20Miyazaki%20aesthetic%2C%20soft%20hand-painted%20watercolor%20backgrounds%2C%20lush%20detailed%20nature%2C%20big%20fluffy%20cumulus%20clouds%2C%20warm%20nostalgic%20golden%20sunlight%2C%20gentle%20cel%20shading%2C%20pastel%20blue%20sky%20and%20sea%2C%20whimsical%20peaceful%20mood%2C%20cinematic%20wide%20shot&image_size=landscape_16_9";
+let coverRetry = 0;
+function handleCoverLoad(img){
+  // 占位图接近方形（宽高比<1.3），真图为16:9横版；检测到占位图则定时重试
+  if(coverRetry >= 10) return;
+  if(img.naturalWidth && img.naturalWidth / img.naturalHeight < 1.3){
+    coverRetry++;
+    setTimeout(function(){
+      img.src = COVER_IMG_URL + "&_r=" + coverRetry + "=" + Date.now();
+    }, 5000);
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.classList.add("show");
+  setTimeout(()=>{t.classList.remove("show");},1800);
+}
+
+// ============【新增个人信息相关函数】============
+function openProfileMask(){
+    // 读取本地信息填充表单
+    profileAvatarImg.src = userInfo.avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=user";
+    inputNickname.value = userInfo.nickname;
+    inputSign.value = userInfo.signature;
+    profileMask.style.display = "flex";
+}
+function closeProfileMask(){
+    profileMask.style.display = "none";
+}
+// 头像文件预览
+avatarFile.onchange = function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+        profileAvatarImg.src = ev.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+function saveProfile(){
+    userInfo.nickname = inputNickname.value.trim();
+    userInfo.signature = inputSign.value.trim();
+    userInfo.avatar = profileAvatarImg.src;
+    localStorage.setItem("userInfo",JSON.stringify(userInfo));
+    showToast("个人信息保存成功");
+    closeProfileMask();
+}
+
+// ============【新增日历表情弹窗函数】============
+function openEmojiMask(dateKey){
+    selectCalendarDateKey = dateKey;
+    emojiMask.style.display = "flex";
+}
+function closeEmojiMask(){
+    emojiMask.style.display = "none";
+}
+// 点击表情保存
+document.querySelectorAll(".emoji-item").forEach(el=>{
+    el.onclick = function(){
+        const emoji = this.innerText;
+        calendarMoodEmoji[selectCalendarDateKey] = emoji;
+        localStorage.setItem("calendarMoodEmoji",JSON.stringify(calendarMoodEmoji));
+        renderCalendar();
+        closeEmojiMask();
+        showToast("已设置当日心情表情");
+    }
+})
+
+// 页面切换
+let savedBodyClasses = "";
+
+function switchPage(pageId){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+
+  const targetPage = document.getElementById("page-"+pageId);
+  if(!targetPage){
+    showToast("页面不存在");
+    return;
+  }
+
+  targetPage.classList.add("active");
+
+  const navItems = document.querySelectorAll(".nav-item");
+  const navIndex = {home:0,post:1,feed:2,calendar:3,profile:4}[pageId];
+  if(navIndex!==undefined){
+    navItems[navIndex].classList.add("active");
+  }
+
+  // 首页使用固定蓝色背景，离开时恢复之前的心情/天气背景
+  if(pageId === "home"){
+    if(!document.body.classList.contains("home-bg")){
+      savedBodyClasses = document.body.className;
+    }
+    document.body.className = "home-bg";
+    document.getElementById("homeLaceTop").style.display = "block";
+    document.getElementById("homeLaceBottom").style.display = "block";
+    document.getElementById("homeFlowerBL").style.display = "block";
+    document.getElementById("homeFlowerTR").style.display = "block";
+  } else {
+    if(document.body.classList.contains("home-bg")){
+      document.body.className = savedBodyClasses || "mood-calm";
+    }
+    document.getElementById("homeLaceTop").style.display = "none";
+    document.getElementById("homeLaceBottom").style.display = "none";
+    document.getElementById("homeFlowerBL").style.display = "none";
+    document.getElementById("homeFlowerTR").style.display = "none";
+  }
+
+  if(pageId === "feed"){
+    renderRecords();
+    refreshFeed(true);
+  }
+  if(pageId === "calendar"){
+    renderCalendar();
+  }
+  if(pageId === "profile"){
+    renderProfileStat();
+  }
+}
+
+function selectMood(key, text, btn){
+  currentMoodKey = key;
+  currentMoodText = text;
+
+  document.body.className = "";
+
+  if(currentWeather === "☀️晴天"){
+    document.body.classList.add("weather-sunny");
+  }else if(currentWeather === "⛅多云"){
+    document.body.classList.add("weather-cloudy");
+  }else if(currentWeather === "🌧️下雨"){
+    document.body.classList.add("weather-rainy");
+  }else if(currentWeather === "❄️下雪"){
+    document.body.classList.add("weather-snowy");
+  }else if(currentWeather === "🌀台风"){
+    document.body.classList.add("weather-typhoon");
+  }
+
+  document.body.classList.add("mood-" + key);
+
+  document.querySelectorAll(".mood-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+
+  showToast("已切换心情："+text);
+}
+
+function clearAllWeatherEffect(){
+  stopRain();
+  stopWind();
+  rainBox.style.display = "none";
+  snowBox.style.display = "none";
+  birdBox.style.display = "none";
+  windBox.style.display = "none";
+  sunDom.style.opacity = "0";
+}
+
+function setWeather(el){
+  document.querySelectorAll(".weather-tag").forEach(e=>e.classList.remove("active"));
+  el.classList.add("active");
+  currentWeather = el.dataset.w;
+
+  clearAllWeatherEffect();
+
+  document.body.className = "";
+
+  if(currentWeather === "☀️晴天"){
+    document.body.classList.add("weather-sunny");
+    sunDom.style.opacity = "1";
+    createBird();
+    birdBox.style.display = "block";
+  }else if(currentWeather === "⛅多云"){
+    document.body.classList.add("weather-cloudy");
+  }else if(currentWeather === "🌧️下雨"){
+    document.body.classList.add("weather-rainy");
+    createRain();
+    rainBox.style.display = "block";
+  }else if(currentWeather === "❄️下雪"){
+    document.body.classList.add("weather-snowy");
+    createSnow();
+    snowBox.style.display = "block";
+  }else if(currentWeather === "🌀台风"){
+    document.body.classList.add("weather-typhoon");
+    createWind();
+    windBox.style.display = "block";
+  }
+
+  document.body.classList.add("mood-" + currentMoodKey);
+
+  showToast("天气切换："+currentWeather);
+}
+
+/* ============ 雨天 Canvas 雨幕：分层雨丝 + 一致风向 + 落地溅落 ============ */
+let rainCanvas = null, rainCtx = null;
+let rainDrops = [], rainSplashes = [];
+let rainRAF = null, rainW = 0, rainH = 0, rainGroundY = 0;
+const RAIN_SLANT = 0.17; // 全局统一雨丝倾角（风向一致，避免“贴图漂移”感）
+
+// 预渲染一根雨丝（尾部渐隐、头部饱和明亮），绘制时按深度缩放
+const rainSprite = (function(){
+  const c = document.createElement("canvas");
+  c.width = 36; c.height = 72;
+  const x = c.getContext("2d");
+  const g = x.createLinearGradient(10, 6, 22, 66);
+  g.addColorStop(0, "rgba(90,140,210,0)");
+  g.addColorStop(0.45, "rgba(90,140,210,0.55)");
+  g.addColorStop(1, "rgba(60,110,200,1)");
+  x.strokeStyle = g;
+  x.lineWidth = 5;
+  x.lineCap = "round";
+  x.beginPath(); x.moveTo(12, 6); x.lineTo(22, 66); x.stroke();
+  // 明亮饱和的雨头
+  x.strokeStyle = "rgba(40,90,180,1)";
+  x.lineWidth = 3;
+  x.beginPath(); x.moveTo(20, 56); x.lineTo(22, 66); x.stroke();
+  return c;
+})();
+
+function createRain(){
+  stopRain();
+  rainBox.innerHTML = "";
+  const c = document.createElement("canvas");
+  rainBox.appendChild(c);
+  rainCanvas = c;
+  rainCtx = c.getContext("2d");
+  resizeRainCanvas();
+  initRainDrops();
+  rainLoop();
+}
+
+function stopRain(){
+  if(rainRAF){ cancelAnimationFrame(rainRAF); rainRAF = null; }
+}
+
+function resizeRainCanvas(){
+  if(!rainCanvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  rainW = window.innerWidth;
+  rainH = window.innerHeight;
+  rainCanvas.width = Math.floor(rainW * dpr);
+  rainCanvas.height = Math.floor(rainH * dpr);
+  rainCanvas.style.width = rainW + "px";
+  rainCanvas.style.height = rainH + "px";
+  rainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // 溅落基准线：底部导航上方一点
+  rainGroundY = rainH - 78;
+}
+
+function initRainDrops(){
+  rainDrops = [];
+  rainSplashes = [];
+  // 密度随屏幕面积自适应，移动端自动减量
+  const count = Math.max(55, Math.min(160, Math.round(rainW * rainH / 11000)));
+  for(let i = 0; i < count; i++){
+    // 深度分层：多数中远景雨丝，少数近景快线
+    const z = Math.pow(Math.random(), 1.6) * 0.7 + 0.3;
+    rainDrops.push({
+      x: Math.random() * (rainW + 120) - 60,
+      y: Math.random() * rainH - 40,
+      z: z,
+      len: 28 + z * 48,
+      speed: 6.5 + z * 9.5,
+      thick: 1.0 + z * 2.0,
+      alpha: 0.35 + z * 0.50,
+      jitter: (Math.random() - 0.5) * 0.4
+    });
+  }
+}
+
+function rainLoop(){
+  rainCtx.clearRect(0, 0, rainW, rainH);
+
+  // 落地溅落：扩散涟漪 + 回弹小水珠
+  for(let i = rainSplashes.length - 1; i >= 0; i--){
+    const s = rainSplashes[i];
+    s.life -= 0.045;
+    if(s.life <= 0){ rainSplashes.splice(i, 1); continue; }
+    s.r += 0.35;
+    const a = s.life * 0.32;
+    rainCtx.strokeStyle = "rgba(80,130,200," + (a * 1.4).toFixed(3) + ")";
+    rainCtx.lineWidth = 1.5;
+    rainCtx.beginPath();
+    rainCtx.ellipse(s.x, s.y, s.r, s.r * 0.3, 0, 0, Math.PI * 2);
+    rainCtx.stroke();
+    rainCtx.fillStyle = "rgba(60,110,190," + (a * 1.8).toFixed(3) + ")";
+    for(let k = 0; k < s.drops.length; k++){
+      const dp = s.drops[k];
+      dp.y += dp.vy;
+      dp.vy += 0.28;
+      dp.x += dp.vx;
+      rainCtx.beginPath();
+      rainCtx.arc(dp.x, dp.y, 1.1, 0, Math.PI * 2);
+      rainCtx.fill();
+    }
+  }
+
+  // 雨丝
+  for(let i = 0; i < rainDrops.length; i++){
+    const d = rainDrops[i];
+    d.y += d.speed;
+    d.x += d.speed * RAIN_SLANT + d.jitter; // 横向速度与倾角一致，雨丝方向稳定
+    if(d.y >= rainGroundY){
+      // 仅较近的雨滴产生溅落
+      if(d.z > 0.55 && Math.random() < 0.45){
+        rainSplashes.push({
+          x: d.x, y: rainGroundY, r: 1 + Math.random() * 1.5, life: 1,
+          drops: [
+            {x: d.x - 2, y: rainGroundY - 1, vx: -0.5 - Math.random() * 0.6, vy: -1.6 - Math.random() * 1.2},
+            {x: d.x + 2, y: rainGroundY - 1, vx: 0.5 + Math.random() * 0.6, vy: -1.4 - Math.random() * 1.0}
+          ]
+        });
+      }
+      d.y = -30 - Math.random() * 80;
+      d.x = Math.random() * (rainW + 160) - 80;
+    }
+    if(d.x < -90) d.x = rainW + 70;
+    else if(d.x > rainW + 90) d.x = -70;
+
+    const drawH = d.len * 1.15;
+    const drawW = (10 + d.thick * 7) * (d.len / 60);
+    const sx = drawW / 24, sy = drawH / 72;
+    rainCtx.globalAlpha = d.alpha;
+    rainCtx.drawImage(rainSprite, d.x - 18.5 * sx, d.y - 66 * sy, drawW, drawH);
+  }
+  rainCtx.globalAlpha = 1;
+
+  rainRAF = requestAnimationFrame(rainLoop);
+}
+
+window.addEventListener("resize", function(){
+  if(rainCanvas){ resizeRainCanvas(); initRainDrops(); }
+});
+
+function createSnow(){
+  snowBox.innerHTML = "";
+  for(let i=0;i<50;i++){
+    let s = document.createElement("div");
+    s.className = "snow";
+    s.innerText = "❄";
+    s.style.left = Math.random()*100+"%";
+    s.style.animationDelay = Math.random()*8+"s";
+    s.style.fontSize = (Math.random()*16+28)+"px";
+    snowBox.appendChild(s);
+  }
+}
+
+/* ============ 晴天白鸽：手绘 SVG 鸽体，扇翅+滑翔，远近层次 ============ */
+function doveSvg(i){
+  return `
+  <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="doveBody${i}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#dde7f0"/>
+      </linearGradient>
+    </defs>
+    <!-- 尾羽 -->
+    <path d="M31 53 L9 44 L19 52 L7 57 L20 59 L33 57 Z"
+          fill="#eef3f8" stroke="#d2dce6" stroke-width="1" stroke-linejoin="round"/>
+    <!-- 远侧翅膀（灰调，被身体半遮） -->
+    <g class="wing wing-far" fill="#dfe8f0" stroke="#ccd7e2" stroke-width="0.8" stroke-linejoin="round">
+      <path d="M54 46 Q60 24 74 13 Q64 26 55 44 Z"/>
+      <path d="M55 47 Q60 31 69 23 Q61 33 55 45 Z"/>
+      <path d="M56 48 Q60 38 66 34 Q59 41 56 48 Z"/>
+    </g>
+    <!-- 身体（略抬头） -->
+    <ellipse cx="52" cy="52" rx="26" ry="12.5" fill="url(#doveBody${i})" transform="rotate(-6 52 52)"/>
+    <!-- 头 -->
+    <circle cx="79" cy="40" r="9" fill="#ffffff"/>
+    <!-- 喙 -->
+    <path d="M87 38.5 L97 41.5 L87 44 Z" fill="#f0a35c"/>
+    <!-- 眼 -->
+    <circle cx="82.5" cy="38" r="1.7" fill="#3b4048"/>
+    <!-- 近侧翅膀：三片分层飞羽 -->
+    <g class="wing wing-near" fill="#fbfdff" stroke="#d3dde7" stroke-width="0.9" stroke-linejoin="round">
+      <path d="M54 46 Q63 21 80 9 Q67 25 55 44 Z"/>
+      <path d="M55 47 Q63 28 75 19 Q64 32 55 45 Z"/>
+      <path d="M56 48 Q62 36 70 31 Q61 40 56 48 Z"/>
+    </g>
+  </svg>`;
+}
+
+function createBird(){
+  birdBox.innerHTML = "";
+  // 大小 / 高度 / 速度 / 透明度错落，营造远近层次
+  const birds = [
+    {w:108, top:"11%", dur:26, delay:0,  op:0.96, blur:0},
+    {w:80,  top:"23%", dur:33, delay:8,  op:0.80, blur:0.6},
+    {w:94,  top:"32%", dur:29, delay:17, op:0.90, blur:0.3},
+    {w:66,  top:"17%", dur:37, delay:25, op:0.70, blur:0.9},
+    {w:88,  top:"40%", dur:24, delay:13, op:0.88, blur:0.25}
+  ];
+  birds.forEach(function(cfg, i){
+    const b = document.createElement("div");
+    b.className = "bird";
+    b.style.width = cfg.w + "px";
+    b.style.top = cfg.top;
+    b.style.animationDuration = cfg.dur + "s";
+    b.style.animationDelay = cfg.delay + "s";
+    b.style.opacity = cfg.op;
+    if(cfg.blur) b.style.filter = "blur(" + cfg.blur + "px)";
+    b.innerHTML = doveSvg(i);
+    birdBox.appendChild(b);
+  });
+}
+
+/* ============ 台风 Canvas：弯曲风线 + 飞舞落叶 + 暴雨混合 ============ */
+let windCanvas = null, windCtx = null;
+let windStreaks = [], windLeaves = [], windRain = [];
+let windRAF = null, windW = 0, windH = 0;
+const WIND_FORCE = 5.5; // 全局风力
+
+const leafColors = ["#8a9a5b","#a0a050","#c0883e","#7a6a4a","#9a8b3e","#6b7d3a","#b5783e"];
+const leafShapes = [
+  function(ctx,x,y,r,rot){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+    ctx.beginPath(); ctx.ellipse(0,0,r,r*0.45,0,0,Math.PI*2); ctx.fill(); ctx.restore();
+  },
+  function(ctx,x,y,r,rot){
+    ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+    ctx.beginPath(); ctx.moveTo(-r,0); ctx.quadraticCurveTo(0,-r*0.6,r,0); ctx.quadraticCurveTo(0,r*0.6,-r,0); ctx.fill(); ctx.restore();
+  }
+];
+
+function createWind(){
+  stopWind();
+  windBox.innerHTML = "";
+  const c = document.createElement("canvas");
+  windBox.appendChild(c);
+  windCanvas = c;
+  windCtx = c.getContext("2d");
+  resizeWindCanvas();
+  initWindParticles();
+  windLoop();
+}
+
+function stopWind(){
+  if(windRAF){ cancelAnimationFrame(windRAF); windRAF = null; }
+}
+
+function resizeWindCanvas(){
+  if(!windCanvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  windW = window.innerWidth;
+  windH = window.innerHeight;
+  windCanvas.width = Math.floor(windW * dpr);
+  windCanvas.height = Math.floor(windH * dpr);
+  windCanvas.style.width = windW + "px";
+  windCanvas.style.height = windH + "px";
+  windCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function initWindParticles(){
+  windStreaks = []; windLeaves = []; windRain = [];
+
+  // 弯曲风线
+  const streakCount = Math.max(30, Math.min(90, Math.round(windW * windH / 18000)));
+  for(let i = 0; i < streakCount; i++){
+    const z = Math.pow(Math.random(), 1.4) * 0.7 + 0.3;
+    windStreaks.push({
+      x: Math.random() * (windW + 200) - 100,
+      y: Math.random() * windH,
+      z: z,
+      len: 40 + z * 80,
+      speed: (3 + z * 5) * WIND_FORCE * 0.5,
+      thick: 0.6 + z * 1.4,
+      alpha: 0.08 + z * 0.22,
+      curveAmp: 8 + Math.random() * 20, // 弯曲幅度
+      curveFreq: 0.02 + Math.random() * 0.03,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+
+  // 飞舞落叶
+  const leafCount = Math.max(12, Math.min(30, Math.round(windW / 50)));
+  for(let i = 0; i < leafCount; i++){
+    windLeaves.push({
+      x: Math.random() * (windW + 200) - 100,
+      y: Math.random() * windH,
+      z: 0.4 + Math.random() * 0.6,
+      size: 5 + Math.random() * 8,
+      speed: (2 + Math.random() * 3) * WIND_FORCE * 0.3,
+      vy: -0.5 + Math.random() * 2, // 上下翻飞
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.2,
+      color: leafColors[Math.floor(Math.random() * leafColors.length)],
+      shape: Math.floor(Math.random() * leafShapes.length),
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.05 + Math.random() * 0.05
+    });
+  }
+
+  // 混合暴雨
+  const rainCount = Math.max(40, Math.min(100, Math.round(windW * windH / 16000)));
+  for(let i = 0; i < rainCount; i++){
+    const z = Math.pow(Math.random(), 1.5) * 0.7 + 0.3;
+    windRain.push({
+      x: Math.random() * (windW + 200) - 100,
+      y: Math.random() * windH - 40,
+      z: z,
+      len: 20 + z * 40,
+      speed: (5 + z * 8) * WIND_FORCE * 0.3,
+      alpha: 0.2 + z * 0.4
+    });
+  }
+}
+
+function windLoop(){
+  windCtx.clearRect(0, 0, windW, windH);
+  const t = performance.now() * 0.001;
+
+  // 绘制暴雨（在风线下方）
+  for(let i = 0; i < windRain.length; i++){
+    const d = windRain[i];
+    d.y += d.speed;
+    d.x += d.speed * 0.28; // 台风雨有较大风偏
+    if(d.y >= windH + 20){
+      d.y = -30 - Math.random() * 60;
+      d.x = Math.random() * (windW + 200) - 100;
+    }
+    if(d.x > windW + 120) d.x = -80;
+    windCtx.globalAlpha = d.alpha;
+    windCtx.strokeStyle = "rgba(70,120,195,1)";
+    windCtx.lineWidth = 1.5 + d.z * 1.2;
+    windCtx.lineCap = "round";
+    windCtx.beginPath();
+    windCtx.moveTo(d.x, d.y);
+    windCtx.lineTo(d.x - d.len * 0.28, d.y - d.len);
+    windCtx.stroke();
+  }
+
+  // 绘制弯曲风线
+  for(let i = 0; i < windStreaks.length; i++){
+    const s = windStreaks[i];
+    s.x += s.speed;
+    if(s.x > windW + s.len + 50){
+      s.x = -s.len - 50;
+      s.y = Math.random() * windH;
+    }
+
+    windCtx.globalAlpha = s.alpha;
+    windCtx.strokeStyle = "rgba(180,195,210,1)";
+    windCtx.lineWidth = s.thick;
+    windCtx.lineCap = "round";
+    windCtx.beginPath();
+    const steps = Math.max(6, Math.floor(s.len / 10));
+    for(let k = 0; k <= steps; k++){
+      const p = k / steps;
+      const px = s.x - s.len + p * s.len;
+      const py = s.y + Math.sin(p * Math.PI * 2 * s.curveFreq * s.len + s.phase + t * 2) * s.curveAmp * p;
+      if(k === 0) windCtx.moveTo(px, py);
+      else windCtx.lineTo(px, py);
+    }
+    windCtx.stroke();
+  }
+
+  // 绘制飞舞落叶
+  for(let i = 0; i < windLeaves.length; i++){
+    const l = windLeaves[i];
+    l.x += l.speed;
+    l.wobble += l.wobbleSpeed;
+    l.y += l.vy + Math.sin(l.wobble) * 1.5;
+    l.rot += l.rotSpeed;
+    // 重置
+    if(l.x > windW + 30 || l.y > windH + 30 || l.y < -40){
+      l.x = -30;
+      l.y = Math.random() * windH * 0.8;
+      l.vy = -0.5 + Math.random() * 2;
+    }
+
+    windCtx.globalAlpha = 0.7 + l.z * 0.3;
+    windCtx.fillStyle = l.color;
+    const sz = l.size * l.z;
+    leafShapes[l.shape](windCtx, l.x, l.y, sz, l.rot);
+  }
+
+  windCtx.globalAlpha = 1;
+  windRAF = requestAnimationFrame(windLoop);
+}
+
+window.addEventListener("resize", function(){
+  if(rainCanvas){ resizeRainCanvas(); initRainDrops(); }
+  if(windCanvas){ resizeWindCanvas(); initWindParticles(); }
+});
+
+function toggleDark(){
+  document.body.classList.toggle("dark-mode");
+  showToast(document.body.classList.contains("dark-mode")?"深色模式打开":"浅色模式打开");
+}
+
+function fillNowTime(){
+  const inp = document.getElementById("diaryInput");
+  if(inp.value.length >= MAX_LENGTH){
+    showToast("已到达最大字数限制");
+    return;
+  }
+  inp.value += "\n【"+new Date().toLocaleString("zh-CN")+"】\n";
+  updateWordCount();
+}
+
+const inputDom = document.getElementById("diaryInput");
+inputDom.addEventListener("input", updateWordCount);
+
+/* ============ 情绪按钮点击动画：涟漪 + 回弹 + 粒子迸发 ============ */
+const moodParticleColors = {
+  happy: "#ffb84d",
+  full:  "#6db3f2",
+  tired: "#b39ddb",
+  sad:   "#8a97a8",
+  calm:  "#7fb8e6"
+};
+document.addEventListener("click", function(e){
+  const btn = e.target.closest ? e.target.closest(".mood-btn") : null;
+  if(!btn) return;
+
+  const rect = btn.getBoundingClientRect();
+  // 键盘触发（Enter/Space）时 clientX/Y 为 0，回退到按钮中心
+  let cx = e.clientX, cy = e.clientY;
+  if(cx === 0 && cy === 0){
+    cx = rect.left + rect.width / 2;
+    cy = rect.top + rect.height / 2;
+  }
+  const x = cx - rect.left, y = cy - rect.top;
+
+  // 涟漪
+  const ripple = document.createElement("span");
+  ripple.className = "mood-ripple";
+  const size = Math.max(rect.width, rect.height) * 0.9;
+  ripple.style.width = ripple.style.height = size + "px";
+  ripple.style.left = (x - size / 2) + "px";
+  ripple.style.top = (y - size / 2) + "px";
+  btn.appendChild(ripple);
+  setTimeout(function(){ ripple.remove(); }, 650);
+
+  // 回弹
+  btn.classList.remove("btn-pop");
+  void btn.offsetWidth; // 重置动画
+  btn.classList.add("btn-pop");
+
+  // 粒子迸发
+  const color = moodParticleColors[btn.dataset.mood] || "#ffd384";
+  for(let i = 0; i < 8; i++){
+    const p = document.createElement("span");
+    p.className = "mood-particle";
+    const ang = Math.random() * Math.PI * 2;
+    const dist = 36 + Math.random() * 46;
+    p.style.setProperty("--tx", (Math.cos(ang) * dist).toFixed(1) + "px");
+    p.style.setProperty("--ty", (Math.sin(ang) * dist - 24).toFixed(1) + "px");
+    p.style.left = cx + "px";
+    p.style.top = cy + "px";
+    const s = 4 + Math.random() * 5;
+    p.style.width = p.style.height = s + "px";
+    p.style.background = color;
+    document.body.appendChild(p);
+    setTimeout(function(){ p.remove(); }, 800);
+  }
+});
+
+function updateWordCount(){
+  const len = inputDom.value.length;
+  document.getElementById("countText").innerText = len;
+  const countWrap = document.querySelector(".word-count");
+  if(len >= MAX_LENGTH){
+    inputDom.value = inputDom.value.substring(0,MAX_LENGTH);
+    updateWordCount();
+    countWrap.classList.add("warn");
+  }else{
+    countWrap.classList.remove("warn");
+  }
+}
+
+function handleImageUpload(e){
+  const files = e.target.files;
+  if(!files.length) return;
+  for(let file of files){
+    const reader = new FileReader();
+    reader.onload = function(evt){
+      selectedImages.push(evt.target.result);
+      renderPreview();
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+function renderPreview(){
+  previewBox.innerHTML = "";
+  selectedImages.forEach(src=>{
+    const img = document.createElement("img");
+    img.src = src;
+    img.className = "preview-img";
+    img.onclick = function(){
+      openImagePreview(src);
+    };
+    previewBox.appendChild(img);
+  })
+}
+
+function openImagePreview(src){
+  previewImage.src = src;
+  imagePreviewMask.style.display = "flex";
+}
+
+function closeImagePreview(){
+  imagePreviewMask.style.display = "none";
+  previewImage.src = "";
+}
+
+async function saveDiary(){
+  const content = inputDom.value.trim();
+  if(!content){
+    showToast("请写下内容再发布！");
+    return;
+  }
+  // 图片压缩后随动态发布（最多6张，防止超出云端单条限制）
+  const imgs = [];
+  for(const s of selectedImages.slice(0,6)){
+    imgs.push(await compressImage(s));
+  }
+  const record = {
+    id: myDeviceId + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,6),
+    deviceId: myDeviceId,
+    userName: myDisplayName(),
+    avatar: myAvatarChar(),
+    key: currentMoodKey,
+    label: currentMoodText,
+    weather: currentWeather,
+    text: content,
+    time: new Date().toLocaleString("zh-CN"),
+    ts: Date.now(),
+    imgs: imgs
+  };
+  if(imgs.length){
+    record.imgKey = CLOUD_IMG_PREFIX + record.id;
+    record.imgCount = imgs.length;
+  }
+  allRecords.unshift(record);
+  localStorage.setItem("moodStore", JSON.stringify(allRecords));
+
+  inputDom.value = "";
+  selectedImages = [];
+  renderPreview();
+  updateWordCount();
+  renderRecords();
+  renderStat();
+  renderProfileStat();
+
+  // 同步云端：图片单独存一条，正文存共享列表
+  try{
+    if(imgs.length){
+      let uploaded = false;
+      try{
+        await cloudWrite(record.imgKey, JSON.stringify(imgs));
+        uploaded = true;
+      }catch(e){
+        try{ await cloudWrite(record.imgKey, JSON.stringify(imgs.slice(0,2))); uploaded = true; }catch(e2){}
+      }
+      if(!uploaded){ record.imgKey = null; record.imgCount = 0; }
+    }
+    await cloudSaveFeed();
+    showToast("发布成功，大家都能看到啦 ✨");
+  }catch(e){
+    showToast("已保存到本机，云端同步失败");
+  }
+  renderRecords();
+}
+
+function renderRecords(){
+  const box = document.getElementById("recordContainer");
+  const allFeed = [...allRecords, ...mockOthers];
+  box.innerHTML = "";
+
+  if(allFeed.length === 0){
+    box.innerHTML = `<div class="diary-card calm">还没有动态，快来发布第一条心情吧 ✨</div>`;
+    return;
+  }
+
+  allFeed.forEach(item=>{
+    const mine = isMine(item);
+    const div = document.createElement("div");
+    div.className = "diary-card " + item.key;
+
+    div.innerHTML = `
+      <div class="card-user">
+        <div class="avatar"></div>
+        <b></b>
+      </div>
+      <div class="card-time"><span></span></div>
+      <div class="card-tag"></div>
+      <div class="card-text"></div>
+    `;
+    div.querySelector(".avatar").textContent = item.avatar || (item.userName || "友").slice(0,1);
+    div.querySelector(".card-user .avatar").onclick = ev=>{ ev.stopPropagation(); showToast(item.userName + "的主页"); };
+    div.querySelector(".card-user b").textContent = item.userName;
+    div.querySelector(".card-user b").onclick = ev=>{ ev.stopPropagation(); showToast(item.userName + "的主页"); };
+    div.querySelector(".card-time span").textContent = (item.time || "") + " · " + (item.weather || "⛅多云");
+    div.querySelector(".card-tag").textContent = item.label;
+    div.querySelector(".card-tag").onclick = ev=>{ ev.stopPropagation(); showToast("筛选：" + item.label); };
+    div.querySelector(".card-text").textContent = item.text;
+
+    // 图片：自己的用本地数据，别人的从云端按需加载
+    let imgWrap = null;
+    const ensureImgWrap = function(){
+      if(!imgWrap){
+        imgWrap = document.createElement("div");
+        imgWrap.className = "card-img-wrap";
+        div.appendChild(imgWrap);
+      }
+      return imgWrap;
+    };
+    const appendImg = function(src){
+      const im = document.createElement("img");
+      im.src = src;
+      im.className = "card-img";
+      im.onclick = ev=>{ ev.stopPropagation(); openImagePreview(src); };
+      ensureImgWrap().appendChild(im);
+    };
+    if(item.imgs && item.imgs.length){
+      item.imgs.forEach(appendImg);
+    }else if(item.imgKey && item.imgCount > 0){
+      const w = ensureImgWrap();
+      loadRemoteImgs(item).then(arr=>{
+        if(!arr.length){ w.remove(); imgWrap = null; return; }
+        arr.forEach(src=>{
+          const im = document.createElement("img");
+          im.src = src;
+          im.className = "card-img";
+          im.onclick = ev=>{ ev.stopPropagation(); openImagePreview(src); };
+          w.appendChild(im);
+        });
+      });
+    }
+
+    // 只有本人可以编辑/删除自己的动态
+    if(mine){
+      const del = document.createElement("span");
+      del.className = "del-btn";
+      del.textContent = "删除";
+      del.onclick = ev=>{ ev.stopPropagation(); deleteOne(item.id); };
+      div.querySelector(".card-time").appendChild(del);
+      div.onclick = ()=>openEdit(item.id);
+    }else{
+      div.onclick = ()=>showToast('查看动态详情');
+    }
+
+    // 点赞按钮：云端动态同步给所有人；模拟动态仅本机记录
+    const actions = document.createElement("div");
+    actions.className = "card-actions";
+    const likeBtn = document.createElement("span");
+    likeBtn.className = "like-btn";
+    const heart = document.createElement("span");
+    heart.className = "heart";
+    heart.textContent = "❤";
+    const likeCount = document.createElement("span");
+    likeCount.className = "like-count";
+    let liked, count, likeTarget;
+    if(item.id){
+      const likes = Array.isArray(item.likes) ? item.likes : [];
+      liked = likes.indexOf(myDeviceId) >= 0;
+      count = likes.length;
+      likeTarget = "cloud:" + item.id;
+    }else{
+      const mockId = "mock-" + item.userName;
+      const st = mockLikes[mockId] || {count:0, mine:false};
+      liked = st.mine;
+      count = st.count;
+      likeTarget = "mock:" + mockId;
+    }
+    likeBtn.classList.toggle("liked", !!liked);
+    likeCount.textContent = count > 0 ? count : "赞";
+    likeBtn.appendChild(heart);
+    likeBtn.appendChild(likeCount);
+    likeBtn.onclick = ev=>{
+      ev.stopPropagation();
+      if(likeTarget.indexOf("cloud:") === 0) toggleLike(likeTarget.slice(6));
+      else toggleMockLike(likeTarget.slice(5));
+    };
+    actions.appendChild(likeBtn);
+    div.appendChild(actions);
+
+    box.appendChild(div);
+  });
+}
+
+function renderStat(){
+  const list = allRecords.filter(isMine);
+  const statDom = document.getElementById("statText");
+
+  if(list.length===0){
+    statDom.innerText="还没有记录哦，去写一条心情吧～";
+    return;
+  }
+
+  let obj={};
+  list.forEach(i=>{
+    if(!obj[i.label]) obj[i.label]=0;
+    obj[i.label]++;
+  });
+
+  let str = "总动态："+list.length+" 条｜";
+  for(let k in obj){
+    str += k + "："+obj[k]+"次  ";
+  }
+  statDom.innerText = str;
+}
+
+function renderProfileStat(){
+  const list = allRecords.filter(isMine);
+  const statDom = document.getElementById("profileStatText");
+
+  if(list.length===0){
+    statDom.innerText="还没有记录哦，去写一条心情吧～";
+    return;
+  }
+
+  let obj={};
+  list.forEach(i=>{
+    if(!obj[i.label]) obj[i.label]=0;
+    obj[i.label]++;
+  });
+
+  let str = "总动态："+list.length+" 条｜";
+  for(let k in obj){
+    str += k + "："+obj[k]+"次  ";
+  }
+  statDom.innerText = str;
+}
+
+// 心情日历【修改：增加表情渲染，点击格子弹出表情选择】
+function renderCalendar(){
+   calendarContainer.innerHTML = "";
+
+   const now = new Date();
+   const year = now.getFullYear();
+   document.getElementById("calendarYearTitle").innerText = year + " 心情日历";
+   const months = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+
+   const myList = allRecords.filter(isMine);
+
+   months.forEach((monthName,m)=>{
+     const monthDiv = document.createElement("div");
+     monthDiv.className = "calendar-month";
+
+     const title = document.createElement("h4");
+     title.innerText = monthName;
+     monthDiv.appendChild(title);
+
+     const grid = document.createElement("div");
+     grid.className = "calendar-grid";
+
+     const firstDay = new Date(year,m,1);
+     const daysInMonth = new Date(year,m+1,0).getDate();
+     const startWeekDay = firstDay.getDay();
+
+     for(let i=0;i<startWeekDay;i++){
+       const empty = document.createElement("div");
+       empty.className = "calendar-day empty";
+       grid.appendChild(empty);
+     }
+
+     for(let d=1;d<=daysInMonth;d++){
+       const day = document.createElement("div");
+       day.className = "calendar-day";
+       day.innerText = d;
+
+       const dateStr = `${year}/${String(m+1).padStart(2,"0")}/${String(d).padStart(2,"0")}`;
+       const record = myList.find(r=>r.time.startsWith(dateStr));
+
+       // 读取保存的表情
+       const emoji = calendarMoodEmoji[dateStr] || "";
+       if(emoji){
+           day.insertAdjacentHTML("beforeend",`<span class="emoji-mark">${emoji}</span>`);
+       }
+
+       if(record){
+         day.classList.add(record.key);
+       }
+
+       if(d === now.getDate() && m === now.getMonth()){
+         day.classList.add("today");
+       }
+       // 点击日期打开表情选择弹窗
+       day.onclick = ()=>openEmojiMask(dateStr);
+
+       grid.appendChild(day);
+     }
+
+     monthDiv.appendChild(grid);
+     calendarContainer.appendChild(monthDiv);
+   });
+}
+
+function exportDiary(){
+  const list = allRecords.filter(isMine);
+  if(list.length===0){
+    showToast("没有动态可以导出");
+    return;
+  }
+
+  let outText = "===== Mood Weather Diary 动态导出 =====\n";
+  list.forEach(r=>{
+    outText += "\n【"+r.time+"】"+r.weather+" "+r.label+"\n用户："+r.userName+"\n";
+    outText += r.text + "\n------------------------------------\n";
+  });
+
+  const blob = new Blob([outText],{type:"text/plain"});
+  const a = document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="心情动态_"+new Date().toLocaleDateString() +".txt";
+  a.click();
+  showToast("已导出文本文件");
+}
+
+function deleteOne(id){
+  const idx = allRecords.findIndex(r=>r.id===id);
+  if(idx < 0) return;
+  const rec = allRecords[idx];
+  allRecords.splice(idx,1);
+  localStorage.setItem("moodStore", JSON.stringify(allRecords));
+  renderRecords();
+  renderStat();
+  renderProfileStat();
+  showToast("已删除这条动态");
+  if(rec.imgKey) cloudDelete(rec.imgKey).catch(()=>{});
+  cloudSaveFeed().catch(()=>showToast("云端同步失败，稍后重试"));
+}
+
+function clearAllRecord(){
+  if(!confirm("确定要清空你发布的全部动态吗？其他人的动态不受影响，此操作不可恢复！")) return;
+  const removed = allRecords.filter(isMine);
+  allRecords = allRecords.filter(r=>!isMine(r));
+  localStorage.setItem("moodStore", JSON.stringify(allRecords));
+  renderRecords();
+  renderStat();
+  renderProfileStat();
+  renderCalendar();
+  removed.forEach(r=>{ if(r.imgKey) cloudDelete(r.imgKey).catch(()=>{}); });
+  cloudSaveFeed().catch(()=>showToast("云端同步失败，稍后重试"));
+  showToast("你的全部动态已清空");
+}
+
+function openEdit(id){
+  const rec = allRecords.find(r=>r.id===id);
+  if(!rec) return;
+  editIndex = id;
+  editTextDom.value = rec.text;
+  editMask.style.display = "flex";
+}
+
+function closeEdit(){
+  editMask.style.display = "none";
+  editIndex = null;
+}
+
+function saveEdit(){
+  const rec = allRecords.find(r=>r.id===editIndex);
+  if(!rec){ closeEdit(); return; }
+  rec.text = editTextDom.value.trim();
+  localStorage.setItem("moodStore", JSON.stringify(allRecords));
+  renderRecords();
+  renderStat();
+  renderProfileStat();
+  closeEdit();
+  showToast("修改保存成功");
+  cloudSaveFeed().catch(()=>showToast("云端同步失败，稍后重试"));
+}
+
+window.onload = function(){
+  document.body.className = "home-bg";
+  document.getElementById("homeLaceTop").style.display = "block";
+  document.getElementById("homeLaceBottom").style.display = "block";
+  document.getElementById("homeFlowerBL").style.display = "block";
+  document.getElementById("homeFlowerTR").style.display = "block";
+  renderRecords();
+  renderStat();
+  renderProfileStat();
+  cloudInit();
+  setInterval(function(){
+    const feedActive = document.getElementById("page-feed").classList.contains("active");
+    if(feedActive) refreshFeed(true);
+  }, 30000);
+}
+</script>
+</body>
+</html>
